@@ -1,0 +1,59 @@
+name: Build
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up jdk
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Change wrapper permissions
+        run: chmod +x ./gradlew
+        shell: bash
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+        shell: bash
+      - name: Download app deps
+        run: ./gradlew androidDependencies --no-daemon
+        shell: bash
+
+      - name: Build
+        run: ./gradlew clean assembleRelease --no-daemon
+        shell: bash
+
+      - name: Fetch public keystore
+        run: wget https://github.com/tytydraco/public-keystore/raw/main/public.jks
+        shell: bash
+
+      - name: Sign release APK
+        run: |
+          apksigner="$(find $ANDROID_SDK_ROOT/build-tools -name apksigner | sort -r | head -n 1)"
+          "$apksigner" sign --ks public.jks --ks-key-alias public --ks-pass pass:public --key-pass pass:public --in ./build/outputs/apk/release/littlekt-samples-release-unsigned.apk --out ./littlekt_sample-release-signed.apk
+        shell: bash
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: littlekt-sample-apk
+          path: ./littlekt_sample-release-signed.apk
+          if-no-files-found: error
+
+      - name: Send artifact to telegram chat
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          curl -X POST -H "content-type: multipart/form-data" -F document=@"./littlekt_sample-release-signed.apk" -F chat_id=${CHAT_ID} https://api.telegram.org/bot${BOT_TOKEN}/sendDocument
+        shell: bash
+
