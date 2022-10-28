@@ -5,7 +5,7 @@ import com.lehaine.littlekt.ContextListener
 import com.lehaine.littlekt.LittleKtActivity
 import com.lehaine.littlekt.LittleKtProps
 import com.lehaine.littlekt.graphics.Color
-import com.lehaine.littlekt.samples.flappybird.FlappyBird
+import com.lehaine.littlekt.samples.game.SampleGame
 
 /**
  * @author Colton Daily
@@ -19,6 +19,6 @@ class AppActivity : LittleKtActivity() {
     }
 
     override fun createContextListener(context: Context): ContextListener {
-        return FlappyBird(context)
+        return SampleGame(context)
     }
 }
